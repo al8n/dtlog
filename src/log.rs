@@ -1,18 +1,21 @@
-use core::{cmp, iter::FusedIterator, marker::PhantomData, num::NonZeroU64};
+use core::{cmp, marker::PhantomData, num::NonZeroU64};
 
 pub use dbutils::{
   equivalent::{Comparable, Equivalent},
   traits::{Type, TypeRef},
 };
 use indexsort::{search, IndexSort};
-use rarena_allocator::{either::Either, unsync::Arena, Allocator, Buffer, Error as ArenaError};
+use rarena_allocator::{either::Either, unsync::Arena, Allocator, Buffer};
+
+use super::{error::Error, Options};
+
+mod iter;
+pub use iter::*;
+
+mod immutable;
+pub use immutable::*;
 
 const DISCARD_LEN_SIZE: usize = 8;
-
-/// Options for the discard log.
-pub struct Options {
-  sync: bool,
-}
 
 /// An abstraction of file id.
 pub trait Fid: Type {
@@ -33,12 +36,19 @@ macro_rules! impl_fid {
 impl_fid!(u16, u32, u64, u128);
 
 /// A discard log that stores the discard stats for each file id.
-pub struct DiscardLog<I> {
+pub struct DiscardLog<I = u32> {
   arena: Arena,
-  next_empty_slot: usize,
+  len: usize,
   opts: Options,
   capacity: usize,
   _marker: PhantomData<I>,
+}
+
+impl<I> AsRef<DiscardLog<I>> for DiscardLog<I> {
+  #[inline]
+  fn as_ref(&self) -> &Self {
+    self
+  }
 }
 
 impl<I> IndexSort for DiscardLog<I>
@@ -48,7 +58,7 @@ where
 {
   #[inline]
   fn len(&self) -> usize {
-    self.next_empty_slot
+    self.len
   }
 
   #[inline]
@@ -94,13 +104,13 @@ impl<I> DiscardLog<I> {
   /// Returns the number of entries in the discard log.
   #[inline]
   pub const fn len(&self) -> usize {
-    self.next_empty_slot
+    self.len
   }
 
   /// Returns `true` if the discard log is empty.
   #[inline]
   pub const fn is_empty(&self) -> bool {
-    self.next_empty_slot == 0
+    self.len == 0
   }
 
   #[inline]
@@ -112,6 +122,39 @@ impl<I> DiscardLog<I> {
   fn truncate(&mut self) {
     todo!()
   }
+
+  pub(crate) fn construct(arena: Arena, opts: Options) -> Self
+  where
+    I: Fid,
+  {
+    let data = arena.data();
+    let data_len = data.len();
+    let entry_size = I::ENCODED_LEN + DISCARD_LEN_SIZE;
+    let num_entries = data_len / entry_size;
+    let remaining = data_len % entry_size;
+    let arena_remaining = arena.remaining();
+    let ro = arena.read_only();
+
+    // If there is remaining bytes in the arena, then it should be zero because each entry should be of fixed size.
+    if remaining != 0 && !ro {
+      let ptr = arena.raw_mut_ptr();
+      let offset = arena.allocated();
+
+      unsafe {
+        core::ptr::write_bytes(ptr.add(offset), 0, arena_remaining);
+      }
+    }
+
+    let cap = (arena_remaining / entry_size) + num_entries;
+
+    Self {
+      arena,
+      len: num_entries,
+      opts,
+      capacity: cap,
+      _marker: PhantomData,
+    }
+  }
 }
 
 impl<I> DiscardLog<I>
@@ -121,7 +164,7 @@ where
   /// Returns an iterator over the entries of the discard log.
   #[inline]
   pub const fn iter(&self) -> Iter<'_, I> {
-    Iter { log: self, idx: 0 }
+    Iter::new(self)
   }
 
   /// Returns the maximum number of discarded bytes and the file id that contains the maximum discard value.
@@ -148,7 +191,7 @@ where
     let data = self.arena.data();
     let (eq, idx) = self.search(fid);
 
-    if idx < self.next_empty_slot && eq {
+    if idx < self.len && eq {
       let off = idx * entry_size + I::ENCODED_LEN;
       let cur_disc = u64::from_be_bytes((&data[off..off + DISCARD_LEN_SIZE]).try_into().unwrap());
 
@@ -163,11 +206,7 @@ where
   ///
   /// ## Panics
   /// - If the currrent discard value plus the discard value is greater than `u64::MAX`, then it would panic because of overflow.
-  pub fn increase(
-    &mut self,
-    fid: &I,
-    discard: NonZeroU64,
-  ) -> Result<u64, Either<I::Error, ArenaError>>
+  pub fn increase(&mut self, fid: &I, discard: NonZeroU64) -> Result<u64, Either<I::Error, Error>>
   where
     I: for<'a> Comparable<I::Ref<'a>>,
   {
@@ -176,7 +215,7 @@ where
     let data_offset = self.arena.data_offset();
     let (eq, idx) = self.search(fid);
 
-    if idx < self.next_empty_slot && eq {
+    if idx < self.len && eq {
       let off = idx * entry_size + I::ENCODED_LEN;
       let cur_disc = u64::from_be_bytes((&data[off..off + DISCARD_LEN_SIZE]).try_into().unwrap());
 
@@ -203,7 +242,7 @@ where
       let mut buf = self
         .arena
         .alloc_bytes(entry_size as u32)
-        .map_err(Either::Right)?;
+        .map_err(|e| Either::Right(Error::from_insufficient_space(e)))?;
       buf.set_len(I::ENCODED_LEN);
       fid.encode(&mut buf).map_err(Either::Left)?;
       buf.put_u64_be_unchecked(discard);
@@ -211,13 +250,12 @@ where
     };
 
     // Move to next slot
-    self.next_empty_slot += 1;
+    self.len += 1;
 
     IndexSort::sort(self);
 
-    if self.opts.sync {
-      // TODO: error handle
-      self.arena.flush().unwrap();
+    if self.opts.sync() {
+      self.arena.flush().map_err(|e| Either::Right(e.into()))?;
     }
 
     Ok(0)
@@ -237,7 +275,7 @@ where
     let data_offset = self.arena.data_offset();
     let (eq, idx) = self.search(fid);
 
-    if idx < self.next_empty_slot && eq {
+    if idx < self.len && eq {
       let off = idx * entry_size + I::ENCODED_LEN;
       let cur_disc = u64::from_be_bytes((&data[off..off + DISCARD_LEN_SIZE]).try_into().unwrap());
 
@@ -271,7 +309,7 @@ where
     let data_offset = self.arena.data_offset();
     let (eq, idx) = self.search(fid);
 
-    if idx < self.next_empty_slot && eq {
+    if idx < self.len && eq {
       let off = idx * entry_size + I::ENCODED_LEN;
       let cur_disc = u64::from_be_bytes((&data[off..off + DISCARD_LEN_SIZE]).try_into().unwrap());
 
@@ -297,7 +335,7 @@ where
     let entry_size = I::ENCODED_LEN + DISCARD_LEN_SIZE;
     let mut eq = false;
     let data = self.data();
-    let idx = search(self.next_empty_slot, |slot| {
+    let idx = search(self.len, |slot| {
       let offset = slot * entry_size;
 
       unsafe {
@@ -316,67 +354,3 @@ where
     (eq, idx)
   }
 }
-
-/// An iterator over the entries of the discard log.
-pub struct Iter<'a, I> {
-  log: &'a DiscardLog<I>,
-  idx: usize,
-}
-
-impl<'a, I> Iterator for Iter<'a, I>
-where
-  I: Fid,
-{
-  type Item = (I::Ref<'a>, u64);
-
-  fn next(&mut self) -> Option<Self::Item> {
-    if self.idx < self.log.next_empty_slot {
-      let entry_size = I::ENCODED_LEN + DISCARD_LEN_SIZE;
-      let data = self.log.arena.data();
-      let offset = self.idx * entry_size;
-      let fid =
-        unsafe { <I::Ref<'_> as TypeRef>::from_slice(&data[offset..offset + I::ENCODED_LEN]) };
-      let discard = u64::from_be_bytes(
-        (&data[offset + I::ENCODED_LEN..offset + I::ENCODED_LEN + DISCARD_LEN_SIZE])
-          .try_into()
-          .unwrap(),
-      );
-
-      self.idx += 1;
-
-      Some((fid, discard))
-    } else {
-      None
-    }
-  }
-
-  #[inline]
-  fn nth(&mut self, n: usize) -> Option<Self::Item> {
-    let remaining = self.log.next_empty_slot - self.idx;
-    if n < remaining {
-      self.idx += n;
-      self.next()
-    } else {
-      self.idx = self.log.next_empty_slot;
-      None
-    }
-  }
-
-  #[inline]
-  fn count(self) -> usize
-  where
-    Self: Sized,
-  {
-    self.log.next_empty_slot - self.idx
-  }
-
-  #[inline]
-  fn size_hint(&self) -> (usize, Option<usize>) {
-    let remaining = self.log.next_empty_slot - self.idx;
-    (remaining, Some(remaining))
-  }
-}
-
-impl<I> ExactSizeIterator for Iter<'_, I> where I: Fid {}
-
-impl<I> FusedIterator for Iter<'_, I> where I: Fid {}

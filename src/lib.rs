@@ -12,3 +12,9 @@ extern crate std;
 
 mod log;
 pub use log::*;
+
+mod options;
+pub use options::*;
+
+/// Error types
+pub mod error;

@@ -18,15 +18,15 @@ harness = false
 
 [features]
 default = ["memmap", "rarena-allocator/default"]
-alloc = ["rarena-allocator/alloc", "zerocopy/alloc"]
-std = ["rarena-allocator/std", "zerocopy/default"]
+alloc = ["rarena-allocator/alloc"]
+std = ["rarena-allocator/std"]
 memmap = ["std", "rarena-allocator/memmap"]
 
 [dependencies]
 dbutils = { version = "0.4", default-features = false }
 indexsort = "0.1"
 rarena-allocator = { version = "0.4", default-features = false }
-zerocopy = { version = "0.7", default-features = false }
+viewit = "0.1.5"
 
 [dev-dependencies]
 criterion = "0.5"

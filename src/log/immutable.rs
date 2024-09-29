@@ -76,19 +76,46 @@ impl<I> ImmutableDiscardLog<I> {
   /// ```rust
   /// use dtlog::Options;
   ///
-  /// let log = Options::new()
-  ///   .with_capacity(100)
-  ///   .alloc::<u32>()
-  ///   .unwrap();
+  /// let path = tempfile::NamedTempFile::new().unwrap().into_temp_path();
+  /// # std::fs::remove_file(&path);
+  /// let log = unsafe {
+  ///   Options::new()
+  ///     .with_capacity(100)
+  ///     .with_create(true)
+  ///     .with_write(true)
+  ///     .with_sync(false)
+  ///     .with_read(true)
+  ///     .map_mut::<u32, _>(&path)
+  ///     .unwrap()
+  /// };
+  ///
+  /// let log = unsafe {
+  ///   Options::new()
+  ///     .map::<u32, _>(&path)
+  ///     .unwrap()
+  /// };
   ///
   /// let reserved = unsafe { log.reserved_slice() };
   /// assert!(reserved.is_empty());
   ///
-  /// let log = Options::new()
-  ///   .with_capacity(100)
-  ///   .with_reserved(8)
-  ///   .alloc::<u32>()
-  ///   .unwrap();
+  /// let path = tempfile::NamedTempFile::new().unwrap().into_temp_path();
+  /// # std::fs::remove_file(&path);
+  /// let log = unsafe {
+  ///   Options::new()
+  ///     .with_capacity(100)
+  ///     .with_create(true)
+  ///     .with_write(true)
+  ///     .with_sync(false)
+  ///     .with_reserved(8)
+  ///     .with_read(true)
+  ///     .map_mut::<u32, _>(&path)
+  ///     .unwrap()
+  /// };
+  /// let log = unsafe {
+  ///   Options::new()
+  ///     .map::<u32, _>(&path)
+  ///     .unwrap()
+  /// };
   ///
   /// let reserved = unsafe { log.reserved_slice() };
   /// assert_eq!(reserved.len(), 8);

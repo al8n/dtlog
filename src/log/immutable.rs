@@ -81,7 +81,7 @@ impl<I> ImmutableDiscardLog<I> {
   /// let log = unsafe {
   ///   Options::new()
   ///     .with_capacity(100)
-  ///     .with_create(true)
+  ///     .with_create_new(true)
   ///     .with_write(true)
   ///     .with_sync(false)
   ///     .with_read(true)
@@ -113,6 +113,7 @@ impl<I> ImmutableDiscardLog<I> {
   /// };
   /// let log = unsafe {
   ///   Options::new()
+  ///     .with_reserved(8)
   ///     .map::<u32, _>(&path)
   ///     .unwrap()
   /// };

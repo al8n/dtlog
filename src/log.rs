@@ -41,6 +41,7 @@ macro_rules! impl_fid {
 impl_fid!(u16, u32, u64, u128);
 
 /// A discard log that stores the discard stats for each file id.
+#[derive(Debug)]
 pub struct DiscardLog<I = u32> {
   arena: Arena,
   len: usize,

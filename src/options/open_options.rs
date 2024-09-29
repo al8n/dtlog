@@ -1,27 +1,13 @@
 use rarena_allocator::either::Either;
 
 use super::{
-  super::ImmutableDiscardLog, write_header, Allocator, Arena, DiscardLog, Fid, Options,
-  CURRENT_VERSION, HEADER_SIZE, MAGIC_TEXT, MAGIC_TEXT_SIZE,
+  super::{
+    error::{bad_magic_text, bad_magic_version},
+    ImmutableDiscardLog,
+  },
+  write_header, Allocator, Arena, DiscardLog, Fid, Options, HEADER_SIZE, MAGIC_TEXT,
+  MAGIC_TEXT_SIZE,
 };
-
-#[cfg(all(feature = "memmap", not(target_family = "wasm")))]
-#[inline]
-fn bad_magic_text() -> std::io::Error {
-  std::io::Error::new(std::io::ErrorKind::InvalidData, "bad magic text")
-}
-
-#[cfg(all(feature = "memmap", not(target_family = "wasm")))]
-#[inline]
-fn bad_magic_version() -> std::io::Error {
-  std::io::Error::new(std::io::ErrorKind::InvalidData, "bad magic version")
-}
-
-#[cfg(all(feature = "memmap", not(target_family = "wasm")))]
-#[inline]
-fn bad_version() -> std::io::Error {
-  std::io::Error::new(std::io::ErrorKind::InvalidData, "bad version")
-}
 
 impl Options {
   /// Sets the option for read access.
@@ -603,21 +589,19 @@ impl Options {
     I: Fid,
     PB: FnOnce() -> Result<std::path::PathBuf, E>,
   {
+    use crate::error::Error;
+
     let magic_version = self.magic_version();
 
     self
       .to_arena_options()
       .with_unify(true)
       .map_with_path_builder::<Arena, _, _>(path_builder)
+      .map_err(|e| e.map_right(Error::from_arena_io_err))
       .and_then(|arena| {
         Self::check_header(arena.reserved_slice(), magic_version).map_err(Either::Right)?;
-        let version = arena.magic_version();
-        if version != CURRENT_VERSION {
-          Err(Either::Right(bad_version()))
-        } else {
-          let log = DiscardLog::construct(arena, self.with_magic_version(magic_version));
-          Ok(ImmutableDiscardLog::construct(log))
-        }
+        let log = DiscardLog::construct(arena, self.with_magic_version(magic_version));
+        Ok(ImmutableDiscardLog::construct(log))
       })
   }
 
@@ -705,7 +689,7 @@ impl Options {
       .to_arena_options()
       .with_unify(true)
       .map_mut::<Arena, _>(path)
-      .map_err(Either::Right)
+      .map_err(|e| Either::Right(crate::error::Error::from_arena_io_err(e)))
       .and_then(|arena| {
         if !exist {
           write_header(arena.reserved_slice_mut(), magic_version);
@@ -713,13 +697,8 @@ impl Options {
           Self::check_header(arena.reserved_slice(), magic_version).map_err(Either::Right)?;
         }
 
-        let version = arena.magic_version();
-        if version != CURRENT_VERSION {
-          Err(Either::Right(bad_version()))
-        } else {
-          let log = DiscardLog::construct(arena, self);
-          Ok(log)
-        }
+        let log = DiscardLog::construct(arena, self);
+        Ok(log)
       })
   }
 

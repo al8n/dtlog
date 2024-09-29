@@ -1,25 +1,48 @@
 [package]
-name = "template-rs"
+name = "dtlog"
 version = "0.0.0"
 edition = "2021"
-repository = "https://github.com/al8n/template-rs"
-homepage = "https://github.com/al8n/template-rs"
-documentation = "https://docs.rs/template-rs"
-description = "A template for creating Rust open-source repo on GitHub"
+repository = "https://github.com/al8n/dtlog"
+homepage = "https://github.com/al8n/dtlog"
+documentation = "https://docs.rs/dtlog"
+description = "A log for tracking discard stats of multi-files databases."
 license = "MIT OR Apache-2.0"
-rust-version = "1.73"
+rust-version = "1.81.0"
+keywords = ["log", "database", "discard", "stats", "lsm"]
+categories = ["data-structures", "database-implementations", "development-tools", "no_std"]
 
 [[bench]]
 path = "benches/foo.rs"
 name = "foo"
 harness = false
 
+[[example]]
+path = "examples/ondisk.rs"
+name = "ondisk"
+required-features = ["memmap"]
+
+[[example]]
+path = "examples/anon.rs"
+name = "anon"
+required-features = ["memmap"]
+
+[[example]]
+path = "examples/no_std.rs"
+name = "no_std"
+required-features = ["alloc"]
+
+
 [features]
-default = ["std"]
-alloc = []
-std = []
+default = ["memmap", "rarena-allocator/default"]
+alloc = ["rarena-allocator/alloc"]
+std = ["rarena-allocator/std"]
+memmap = ["std", "rarena-allocator/memmap"]
 
 [dependencies]
+dbutils = { version = "0.4", default-features = false }
+indexsort = "0.1"
+rarena-allocator = { version = "0.4", default-features = false }
+viewit = "0.1.5"
 
 [dev-dependencies]
 criterion = "0.5"

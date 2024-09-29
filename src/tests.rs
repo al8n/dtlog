@@ -210,7 +210,7 @@ fn test_discard_log_bad_magic_text() {
   use std::io::Write;
 
   let dir = tempfile::tempdir().unwrap();
-  let p = dir.path().join("DISCARD");
+  let p = dir.path().join("bad_magic.DISCARD");
 
   let log = unsafe {
     Options::new()
@@ -253,7 +253,7 @@ fn test_discard_log_bad_magic_version() {
   use std::io::{Seek, SeekFrom, Write};
 
   let dir = tempfile::tempdir().unwrap();
-  let p = dir.path().join("DISCARD");
+  let p = dir.path().join("bad_magic_version.DISCARD");
 
   let log = unsafe {
     Options::new()
@@ -297,7 +297,7 @@ fn test_discard_log_bad_version() {
   use std::io::{Seek, SeekFrom, Write};
 
   let dir = tempfile::tempdir().unwrap();
-  let p = dir.path().join("DISCARD");
+  let p = dir.path().join("bad_version.DISCARD");
 
   let log = unsafe {
     Options::new()

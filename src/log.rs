@@ -13,7 +13,11 @@ use super::{error::Error, Options};
 pub mod iter;
 use iter::*;
 
+#[cfg(all(feature = "memmap", not(target_family = "wasm")))]
+#[cfg_attr(docsrs, doc(cfg(all(feature = "memmap", not(target_family = "wasm")))))]
 mod immutable;
+#[cfg(all(feature = "memmap", not(target_family = "wasm")))]
+#[cfg_attr(docsrs, doc(cfg(all(feature = "memmap", not(target_family = "wasm")))))]
 pub use immutable::*;
 
 const DISCARD_LEN_SIZE: usize = 8;

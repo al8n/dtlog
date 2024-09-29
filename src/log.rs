@@ -47,6 +47,7 @@ pub struct DiscardLog<I = u32> {
   capacity: usize,
 
   // Once constructed, the below fields are immutable.
+  #[allow(dead_code)]
   opts: Options,
   _marker: PhantomData<I>,
 }

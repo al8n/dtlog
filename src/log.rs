@@ -7,6 +7,8 @@ pub use dbutils::{
 use indexsort::{search, IndexSort};
 use rarena_allocator::{either::Either, unsync::Arena, Allocator, Buffer};
 
+use crate::HEADER_SIZE;
+
 use super::{error::Error, Options};
 
 /// Iterators for the discard log.
@@ -113,6 +115,441 @@ impl<I> DiscardLog<I> {
   #[inline]
   pub const fn is_empty(&self) -> bool {
     self.len == 0
+  }
+
+  /// Returns the path of the log.
+  ///
+  /// If the log is in memory, this method will return `None`.
+  ///
+  /// ## Example
+  ///
+  /// ```rust
+  /// use dtlog::Options;
+  ///
+  /// let log = Options::new()
+  ///   .with_capacity(100)
+  ///   .alloc::<u32>()
+  ///   .unwrap();
+  ///
+  /// assert_eq!(log.path(), None);
+  ///
+  /// let path = tempfile::NamedTempFile::new().unwrap().into_temp_path();
+  /// # std::fs::remove_file(&path);
+  /// let log = unsafe {
+  ///   Options::new()
+  ///     .with_capacity(100)
+  ///     .with_create(true)
+  ///     .with_write(true)
+  ///     .with_read(true)
+  ///     .map_mut::<u32, _>(&path)
+  ///     .unwrap()
+  /// };
+  ///
+  /// assert_eq!(log.path().map(|p| p.as_path()), Some(path.as_ref()));
+  /// ```
+  #[cfg(all(feature = "memmap", not(target_family = "wasm")))]
+  #[cfg_attr(docsrs, doc(cfg(all(feature = "memmap", not(target_family = "wasm")))))]
+  #[inline]
+  pub fn path(&self) -> Option<&std::rc::Rc<std::path::PathBuf>> {
+    self.arena.path()
+  }
+
+  /// Returns `true` if the log is in memory.
+  ///
+  /// ## Example
+  ///
+  /// ```rust
+  /// use dtlog::Options;
+  ///
+  /// let log = Options::new()
+  ///   .with_capacity(100)
+  ///   .alloc::<u32>()
+  ///   .unwrap();
+  ///
+  /// assert!(log.in_memory());
+  ///
+  /// # #[cfg(all(feature = "memmap", not(target_family = "wasm")))]
+  /// # {
+  /// let path = tempfile::NamedTempFile::new().unwrap().into_temp_path();
+  /// # std::fs::remove_file(&path);
+  /// let log = unsafe {
+  ///   Options::new()
+  ///     .with_capacity(100)
+  ///     .with_create(true)
+  ///     .with_write(true)
+  ///     .with_read(true)
+  ///     .map_mut::<u32, _>(&path)
+  ///     .unwrap()
+  /// };
+  /// assert!(!log.in_memory());
+  /// # }
+  ///
+  /// ```
+  #[inline]
+  pub fn in_memory(&self) -> bool {
+    self.arena.is_inmemory()
+  }
+
+  /// Returns `true` if the log is on disk.
+  ///
+  /// ## Example
+  ///
+  /// ```rust
+  /// use dtlog::Options;
+  ///
+  /// let log = Options::new()
+  ///   .with_capacity(100)
+  ///   .alloc::<u32>()
+  ///   .unwrap();
+  ///
+  /// assert!(!log.on_disk());
+  ///
+  /// # #[cfg(all(feature = "memmap", not(target_family = "wasm")))]
+  /// # {
+  /// let path = tempfile::NamedTempFile::new().unwrap().into_temp_path();
+  /// # std::fs::remove_file(&path);
+  /// let log = unsafe {
+  ///   Options::new()
+  ///     .with_capacity(100)
+  ///     .with_create(true)
+  ///     .with_write(true)
+  ///     .with_read(true)
+  ///     .map_mut::<u32, _>(&path)
+  ///     .unwrap()
+  /// };
+  /// assert!(log.on_disk());
+  /// # }
+  /// ```
+  #[inline]
+  pub fn on_disk(&self) -> bool {
+    self.arena.is_ondisk()
+  }
+
+  /// Returns `true` if the log is using a memory map backend.
+  ///
+  /// ## Example
+  ///
+  /// ```rust
+  /// use dtlog::Options;
+  ///
+  /// let log = Options::new()
+  ///   .with_capacity(100)
+  ///   .alloc::<u32>()
+  ///   .unwrap();
+  ///
+  /// assert!(!log.is_map());
+  ///
+  /// let log = Options::new()
+  ///   .with_capacity(100)
+  ///   .map_anon::<u32>()
+  ///   .unwrap();
+  ///
+  /// assert!(log.is_map());
+  ///
+  /// # #[cfg(all(feature = "memmap", not(target_family = "wasm")))]
+  /// # {
+  /// let path = tempfile::NamedTempFile::new().unwrap().into_temp_path();
+  /// # std::fs::remove_file(&path);
+  /// let log = unsafe {
+  ///   Options::new()
+  ///     .with_capacity(100)
+  ///     .with_create(true)
+  ///     .with_write(true)
+  ///     .with_read(true)
+  ///     .map_mut::<u32, _>(&path)
+  ///     .unwrap()
+  /// };
+  /// assert!(log.is_map());
+  /// # }
+  /// ```
+  #[cfg(all(feature = "memmap", not(target_family = "wasm")))]
+  #[cfg_attr(docsrs, doc(cfg(all(feature = "memmap", not(target_family = "wasm")))))]
+  #[inline]
+  pub fn is_map(&self) -> bool {
+    self.arena.is_map()
+  }
+
+  /// Returns the reserved space in the discard log.
+  ///
+  /// ## Safety
+  /// - The writer must ensure that the returned slice is not modified.
+  /// - This method is not thread-safe, so be careful when using it.
+  ///
+  /// ## Example
+  ///
+  /// ```rust
+  /// use dtlog::Options;
+  ///
+  /// let log = Options::new()
+  ///   .with_capacity(100)
+  ///   .alloc::<u32>()
+  ///   .unwrap();
+  ///
+  /// let reserved = unsafe { log.reserved_slice() };
+  /// assert!(reserved.is_empty());
+  ///
+  /// let log = Options::new()
+  ///   .with_capacity(100)
+  ///   .with_reserved(8)
+  ///   .alloc::<u32>()
+  ///   .unwrap();
+  ///
+  /// let reserved = unsafe { log.reserved_slice() };
+  /// assert_eq!(reserved.len(), 8);
+  /// ```
+  #[inline]
+  pub unsafe fn reserved_slice(&self) -> &[u8] {
+    let reserved = self.opts.reserved();
+    if reserved == 0 {
+      return &[];
+    }
+
+    let reserved_slice = self.arena.reserved_slice();
+    &reserved_slice[HEADER_SIZE..]
+  }
+
+  /// Locks the underlying file for exclusive access, only works on mmap with a file backend.
+  ///
+  /// ## Example
+  ///
+  /// ```rust
+  /// use dtlog::Options;
+  /// # let path = tempfile::NamedTempFile::new().unwrap().into_temp_path();
+  /// # std::fs::remove_file(&path);
+  /// /// Create a new file without automatic syncing.
+  /// let log = unsafe {
+  ///   Options::new()
+  ///     .with_sync(false)
+  ///     .with_create(true)
+  ///     .with_read(true)
+  ///     .with_write(true)
+  ///     .with_capacity(100)
+  ///     .map_mut::<u32, _>(&path).unwrap()
+  /// };
+  ///
+  /// log.lock_exclusive().unwrap();
+  /// ```
+  #[cfg(all(feature = "memmap", not(target_family = "wasm")))]
+  #[cfg_attr(docsrs, doc(cfg(all(feature = "memmap", not(target_family = "wasm")))))]
+  #[inline]
+  pub fn lock_exclusive(&self) -> std::io::Result<()> {
+    self.arena.lock_exclusive()
+  }
+
+  /// Locks the underlying file for shared access, only works on mmap with a file backend.
+  ///
+  /// ## Example
+  ///
+  /// ```rust
+  /// use dtlog::Options;
+  /// # let path = tempfile::NamedTempFile::new().unwrap().into_temp_path();
+  /// # std::fs::remove_file(&path);
+  /// /// Create a new file without automatic syncing.
+  /// let log = unsafe {
+  ///   Options::new()
+  ///     .with_sync(false)
+  ///     .with_create(true)
+  ///     .with_read(true)
+  ///     .with_write(true)
+  ///     .with_capacity(100)
+  ///     .map_mut::<u32, _>(&path).unwrap()
+  /// };
+  ///
+  /// log.lock_shared().unwrap();
+  /// ```
+  #[cfg(all(feature = "memmap", not(target_family = "wasm")))]
+  #[cfg_attr(docsrs, doc(cfg(all(feature = "memmap", not(target_family = "wasm")))))]
+  #[inline]
+  pub fn lock_shared(&self) -> std::io::Result<()> {
+    self.arena.lock_shared()
+  }
+
+  /// Unlocks the underlying file, only works on mmap with a file backend.
+  ///
+  /// ## Example
+  ///
+  /// ```rust
+  /// use dtlog::Options;
+  /// # let path = tempfile::NamedTempFile::new().unwrap().into_temp_path();
+  /// # std::fs::remove_file(&path);
+  /// /// Create a new file without automatic syncing.
+  /// let log = unsafe {
+  ///   Options::new()
+  ///     .with_sync(false)
+  ///     .with_create(true)
+  ///     .with_read(true)
+  ///     .with_write(true)
+  ///     .with_capacity(100)
+  ///     .map_mut::<u32, _>(&path).unwrap()
+  /// };
+  ///
+  /// log.lock_exclusive().unwrap();
+  ///
+  /// log.unlock().unwrap();
+  /// ```
+  #[cfg(all(feature = "memmap", not(target_family = "wasm")))]
+  #[cfg_attr(docsrs, doc(cfg(all(feature = "memmap", not(target_family = "wasm")))))]
+  #[inline]
+  pub fn unlock(&self) -> std::io::Result<()> {
+    self.arena.unlock()
+  }
+
+  /// Returns the mutable reference to the reserved slice.
+  ///
+  /// ## Safety
+  /// - The caller must ensure that the there is no others accessing reserved slice for either read or write.
+  /// - This method is not thread-safe, so be careful when using it.
+  ///
+  /// ## Example
+  ///
+  /// ```rust
+  /// use dtlog::Options;
+  ///
+  /// let log = Options::new()
+  ///   .with_capacity(100)
+  ///   .alloc::<u32>()
+  ///   .unwrap();
+  ///
+  /// let reserved = unsafe { log.reserved_slice_mut() };
+  /// assert!(reserved.is_empty());
+  ///
+  /// let log = Options::new()
+  ///   .with_capacity(100)
+  ///   .with_reserved(8)
+  ///   .alloc::<u32>()
+  ///   .unwrap();
+  ///
+  /// let reserved = unsafe { log.reserved_slice_mut() };
+  /// assert_eq!(reserved.len(), 8);
+  ///
+  /// reserved.copy_from_slice(b"mysanity");
+  /// assert_eq!(reserved, b"mysanity");
+  ///
+  /// let reserved = unsafe { log.reserved_slice() };
+  /// assert_eq!(reserved, b"mysanity");
+  /// ```
+  #[allow(clippy::mut_from_ref)]
+  #[inline]
+  pub unsafe fn reserved_slice_mut(&self) -> &mut [u8] {
+    let reserved = self.opts.reserved();
+    if reserved == 0 {
+      return &mut [];
+    }
+
+    let reserved_slice = self.arena.reserved_slice_mut();
+    &mut reserved_slice[HEADER_SIZE..]
+  }
+
+  /// Flushes the memory-mapped file to disk.
+  ///
+  /// ## Example
+  ///
+  /// ```rust
+  /// use dtlog::Options;
+  /// # let path = tempfile::NamedTempFile::new().unwrap().into_temp_path();
+  /// # std::fs::remove_file(&path);
+  /// /// Create a new file without automatic syncing.
+  /// let arena = unsafe {
+  ///   Options::new()
+  ///     .with_sync(false)
+  ///     .with_create(true)
+  ///     .with_read(true)
+  ///     .with_write(true)
+  ///     .with_capacity(100)
+  ///     .map_mut::<u32, _>(&path).unwrap() };
+  ///
+  /// arena.flush().unwrap();
+  /// ```
+  #[cfg(all(feature = "memmap", not(target_family = "wasm")))]
+  #[cfg_attr(docsrs, doc(cfg(all(feature = "memmap", not(target_family = "wasm")))))]
+  #[inline]
+  pub fn flush(&self) -> std::io::Result<()> {
+    self.arena.flush()
+  }
+
+  /// Flushes the memory-mapped file to disk asynchronously.
+  ///
+  /// ## Example
+  ///
+  /// ```rust
+  /// use dtlog::Options;
+  /// # let path = tempfile::NamedTempFile::new().unwrap().into_temp_path();
+  /// # std::fs::remove_file(&path);
+  /// /// Create a new file without automatic syncing.
+  /// let log = unsafe {
+  ///   Options::new()
+  ///     .with_sync(false)
+  ///     .with_create(true)
+  ///     .with_read(true)
+  ///     .with_write(true)
+  ///     .with_capacity(100)
+  ///     .map_mut::<u32, _>(&path).unwrap()
+  /// };
+  ///
+  /// log.flush_async().unwrap();
+  /// ```
+  #[cfg(all(feature = "memmap", not(target_family = "wasm")))]
+  #[cfg_attr(docsrs, doc(cfg(all(feature = "memmap", not(target_family = "wasm")))))]
+  #[inline]
+  pub fn flush_async(&self) -> std::io::Result<()> {
+    self.arena.flush_async()
+  }
+
+  /// Flushes outstanding memory map modifications in the range to disk.
+  ///
+  /// ## Example
+  ///
+  /// ```rust
+  /// use dtlog::Options;
+  /// # let path = tempfile::NamedTempFile::new().unwrap().into_temp_path();
+  /// # std::fs::remove_file(&path);
+  ///
+  /// /// Create a new file without automatic syncing.
+  /// let log = unsafe {
+  ///   Options::new()
+  ///     .with_sync(false)
+  ///     .with_create(true)
+  ///     .with_read(true)
+  ///     .with_write(true)
+  ///     .with_capacity(100)
+  ///     .map_mut::<u32, _>(&path).unwrap()
+  /// };
+  ///
+  /// log.flush_range(0, 50).unwrap();
+  /// ```
+  #[cfg(all(feature = "memmap", not(target_family = "wasm")))]
+  #[cfg_attr(docsrs, doc(cfg(all(feature = "memmap", not(target_family = "wasm")))))]
+  #[inline]
+  pub fn flush_range(&self, offset: usize, len: usize) -> std::io::Result<()> {
+    self.arena.flush_header_and_range(offset, len)
+  }
+
+  /// Asynchronously flushes outstanding memory map modifications in the range to disk.
+  ///
+  /// ## Example
+  ///
+  /// ```rust
+  /// use dtlog::Options;
+  /// # let path = tempfile::NamedTempFile::new().unwrap().into_temp_path();
+  /// # std::fs::remove_file(&path);
+  /// /// Create a new file without automatic syncing.
+  /// let log = unsafe {
+  ///   Options::new()
+  ///     .with_sync(false)
+  ///     .with_create(true)
+  ///     .with_read(true)
+  ///     .with_write(true)
+  ///     .with_capacity(100)
+  ///     .map_mut::<u32, _>(&path).unwrap()
+  /// };
+  ///
+  /// log.flush_async_range(0, 50).unwrap();
+  /// ```
+  #[cfg(all(feature = "memmap", not(target_family = "wasm")))]
+  #[cfg_attr(docsrs, doc(cfg(all(feature = "memmap", not(target_family = "wasm")))))]
+  #[inline]
+  pub fn flush_async_range(&self, offset: usize, len: usize) -> std::io::Result<()> {
+    self.arena.flush_async_header_and_range(offset, len)
   }
 
   #[inline]

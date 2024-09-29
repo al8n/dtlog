@@ -30,6 +30,178 @@ impl<I> ImmutableDiscardLog<I> {
     self.0.is_empty()
   }
 
+  /// Returns the path of the log.
+  ///
+  /// ## Example
+  ///
+  /// ```rust
+  /// use dtlog::Options;
+  ///
+  /// let path = tempfile::NamedTempFile::new().unwrap().into_temp_path();
+  ///
+  /// # std::fs::remove_file(&path);
+  /// # let log = unsafe {
+  /// #  Options::new()
+  /// #    .with_capacity(100)
+  /// #    .with_create(true)
+  /// #    .with_write(true)
+  /// #    .with_read(true)
+  /// #    .map_mut::<u32, _>(&path)
+  /// #    .unwrap()
+  /// # };
+  ///
+  /// let log = unsafe {
+  ///   Options::new()
+  ///     .map::<u32, _>(&path)
+  ///     .unwrap()
+  /// };
+  /// let path: &std::path::Path = path.as_ref();
+  /// assert_eq!(log.path().as_path(), path);
+  /// ```
+  #[cfg(all(feature = "memmap", not(target_family = "wasm")))]
+  #[cfg_attr(docsrs, doc(cfg(all(feature = "memmap", not(target_family = "wasm")))))]
+  #[inline]
+  pub fn path(&self) -> &std::rc::Rc<std::path::PathBuf> {
+    self.0.path().unwrap()
+  }
+
+  /// Returns the reserved space in the discard log.
+  ///
+  /// ## Safety
+  /// - The writer must ensure that the returned slice is not modified.
+  /// - This method is not thread-safe, so be careful when using it.
+  ///
+  /// ## Example
+  ///
+  /// ```rust
+  /// use dtlog::Options;
+  ///
+  /// let log = Options::new()
+  ///   .with_capacity(100)
+  ///   .alloc::<u32>()
+  ///   .unwrap();
+  ///
+  /// let reserved = unsafe { log.reserved_slice() };
+  /// assert!(reserved.is_empty());
+  ///
+  /// let log = Options::new()
+  ///   .with_capacity(100)
+  ///   .with_reserved(8)
+  ///   .alloc::<u32>()
+  ///   .unwrap();
+  ///
+  /// let reserved = unsafe { log.reserved_slice() };
+  /// assert_eq!(reserved.len(), 8);
+  /// ```
+  #[inline]
+  pub unsafe fn reserved_slice(&self) -> &[u8] {
+    self.0.reserved_slice()
+  }
+
+  /// Locks the underlying file for exclusive access, only works on mmap with a file backend.
+  ///
+  /// ## Example
+  ///
+  /// ```rust
+  /// use dtlog::Options;
+  /// # let path = tempfile::NamedTempFile::new().unwrap().into_temp_path();
+  /// # std::fs::remove_file(&path);
+  /// # let log = unsafe {
+  /// #  Options::new()
+  /// #    .with_capacity(100)
+  /// #    .with_create(true)
+  /// #    .with_write(true)
+  /// #    .with_sync(false)
+  /// #    .with_read(true)
+  /// #    .map_mut::<u32, _>(&path)
+  /// #    .unwrap()
+  /// # };
+  ///
+  /// let log = unsafe {
+  ///   Options::new()
+  ///     .map::<u32, _>(&path)
+  ///     .unwrap()
+  /// };
+  ///
+  /// log.lock_exclusive().unwrap();
+  /// ```
+  #[cfg(all(feature = "memmap", not(target_family = "wasm")))]
+  #[cfg_attr(docsrs, doc(cfg(all(feature = "memmap", not(target_family = "wasm")))))]
+  #[inline]
+  pub fn lock_exclusive(&self) -> std::io::Result<()> {
+    self.0.lock_exclusive()
+  }
+
+  /// Locks the underlying file for shared access, only works on mmap with a file backend.
+  ///
+  /// ## Example
+  ///
+  /// ```rust
+  /// use dtlog::Options;
+  /// # let path = tempfile::NamedTempFile::new().unwrap().into_temp_path();
+  /// # std::fs::remove_file(&path);
+  /// # let log = unsafe {
+  /// #   Options::new()
+  /// #     .with_capacity(100)
+  /// #     .with_create(true)
+  /// #     .with_write(true)
+  /// #     .with_sync(false)
+  /// #     .with_read(true)
+  /// #     .map_mut::<u32, _>(&path)
+  /// #     .unwrap()
+  /// # };
+  ///
+  /// let log = unsafe {
+  ///   Options::new()
+  ///     .map::<u32, _>(&path)
+  ///     .unwrap()
+  /// };
+  ///
+  /// log.lock_shared().unwrap();
+  /// ```
+  #[cfg(all(feature = "memmap", not(target_family = "wasm")))]
+  #[cfg_attr(docsrs, doc(cfg(all(feature = "memmap", not(target_family = "wasm")))))]
+  #[inline]
+  pub fn lock_shared(&self) -> std::io::Result<()> {
+    self.0.lock_shared()
+  }
+
+  /// Unlocks the underlying file, only works on mmap with a file backend.
+  ///
+  /// ## Example
+  ///
+  /// ```rust
+  /// use dtlog::Options;
+  /// # let path = tempfile::NamedTempFile::new().unwrap().into_temp_path();
+  /// # std::fs::remove_file(&path);
+  /// # let log = unsafe {
+  /// #   Options::new()
+  /// #     .with_capacity(100)
+  /// #     .with_create(true)
+  /// #     .with_write(true)
+  /// #     .with_sync(false)
+  /// #     .with_read(true)
+  /// #     .map_mut::<u32, _>(&path)
+  /// #     .unwrap()
+  /// # };
+  ///
+  /// let log = unsafe {
+  ///   Options::new()
+  ///     .map::<u32, _>(&path)
+  ///     .unwrap()
+  /// };
+  ///
+  /// log.lock_exclusive().unwrap();
+  ///
+  /// log.unlock().unwrap();
+  /// ```
+  #[cfg(all(feature = "memmap", not(target_family = "wasm")))]
+  #[cfg_attr(docsrs, doc(cfg(all(feature = "memmap", not(target_family = "wasm")))))]
+  #[inline]
+  pub fn unlock(&self) -> std::io::Result<()> {
+    self.0.unlock()
+  }
+
   #[inline]
   pub(crate) const fn construct(log: DiscardLog<I>) -> Self {
     Self(log)

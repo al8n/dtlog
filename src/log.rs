@@ -53,13 +53,6 @@ pub struct DiscardLog<I = u32> {
   _marker: PhantomData<I>,
 }
 
-impl<I> AsRef<DiscardLog<I>> for DiscardLog<I> {
-  #[inline]
-  fn as_ref(&self) -> &Self {
-    self
-  }
-}
-
 impl<I> IndexSort for DiscardLog<I>
 where
   I: Fid,

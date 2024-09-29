@@ -113,6 +113,17 @@ fn test_discard_log_map_anon() {
 
 #[test]
 #[cfg(all(feature = "memmap", not(target_family = "wasm")))]
+fn test_discard_log_map_anon_unify() {
+  let log = Options::new()
+    .with_capacity(100)
+    .with_unify(true)
+    .map_anon()
+    .unwrap();
+  basic(log);
+}
+
+#[test]
+#[cfg(all(feature = "memmap", not(target_family = "wasm")))]
 #[cfg_attr(miri, ignore)]
 fn test_discard_log_map_file() {
   use std::io::{Seek, Write};
@@ -188,6 +199,7 @@ fn test_discard_log_map_file() {
       .unwrap();
     file.seek(std::io::SeekFrom::End(0)).unwrap();
     file.write_all(&[1, 1, 1]).unwrap();
+    file.sync_all().unwrap();
   }
 
   let mut log = unsafe {
@@ -232,6 +244,7 @@ fn test_discard_log_bad_magic_text() {
       .open(&p)
       .unwrap();
     file.write_all(&[1, 1, 1]).unwrap();
+    file.sync_all().unwrap();
   }
 
   let err = unsafe {
@@ -276,6 +289,7 @@ fn test_discard_log_bad_magic_version() {
       .unwrap();
     file.seek(SeekFrom::Start(MAGIC_TEXT_SIZE as u64)).unwrap();
     file.write_all(&[1, 1]).unwrap();
+    file.sync_all().unwrap();
   }
 
   let err = unsafe {
@@ -322,6 +336,7 @@ fn test_discard_log_bad_version() {
       .seek(SeekFrom::Start(MAGIC_TEXT_SIZE as u64 + 6))
       .unwrap(); // 4 is the offset of the magic version of arena
     file.write_all(&[1, 1]).unwrap();
+    file.sync_all().unwrap();
   }
 
   let err = unsafe {
@@ -334,4 +349,16 @@ fn test_discard_log_bad_version() {
 
   assert_eq!(err.kind(), std::io::ErrorKind::InvalidData);
   assert!(err.to_string().contains("bad version"), "{err}");
+}
+
+#[test]
+fn test_insufficient_space_vec() {
+  let err = Options::new().alloc::<u32>().unwrap_err();
+  assert!(matches!(err, crate::error::Error::InsufficientSpace { .. }));
+}
+
+#[test]
+fn test_insufficient_space_map_anon() {
+  let err = Options::new().with_capacity(1).alloc::<u32>().unwrap_err();
+  assert!(err.to_string().contains("insufficient space"));
 }

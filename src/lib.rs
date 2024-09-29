@@ -4,8 +4,8 @@
 #![cfg_attr(docsrs, allow(unused_attributes))]
 #![deny(missing_docs)]
 
-#[cfg(all(not(feature = "std"), feature = "alloc"))]
-extern crate alloc as std;
+#[cfg(not(any(feature = "std", feature = "alloc")))]
+compile_error!("This crate can only be used with 'std' or 'alloc' feature is enabled.");
 
 #[cfg(all(feature = "std", not(feature = "alloc")))]
 extern crate std;

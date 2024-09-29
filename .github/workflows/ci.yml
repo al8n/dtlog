@@ -109,7 +109,7 @@ jobs:
       - name: cargo build --target ${{ matrix.target }}
         run: |
           rustup target add ${{ matrix.target }}
-          cargo build --target ${{ matrix.target }}
+          cargo build --target ${{ matrix.target }} --no-default-features --features alloc
         if: matrix.target == 'wasm32-unknown-unknown' || matrix.target == 'wasm32-wasi'
       # - name: cargo build --target ${{ matrix.target }}
       #   run: |
@@ -214,7 +214,7 @@ jobs:
         run: ci/sanitizer.sh
 
   miri-tb:
-    name: miri-tb-${{ matrix.target }}-${{ matrix.cfg }}
+    name: miri-tb-${{ matrix.target }}
     strategy:
       matrix:
         os:
@@ -226,8 +226,8 @@ jobs:
           - powerpc64-unknown-linux-gnu
           - x86_64-apple-darwin
           - aarch64-apple-darwin
-        cfg:
-          - all_tests
+        # cfg:
+        #   - all_tests
         # Exclude invalid combinations
         exclude:
           - os: ubuntu-latest
@@ -257,10 +257,10 @@ jobs:
         run: cargo install cargo-hack
       - name: Miri
         run: |
-          bash ci/miri_tb.sh ${{ matrix.target }} ${{ matrix.cfg }}
+          bash ci/miri_tb.sh ${{ matrix.target }}
 
   miri-sb:
-    name: miri-sb-${{ matrix.target }}-${{ matrix.cfg }}
+    name: miri-sb-${{ matrix.target }}
     strategy:
       matrix:
         os:
@@ -272,8 +272,8 @@ jobs:
           - powerpc64-unknown-linux-gnu
           - x86_64-apple-darwin
           - aarch64-apple-darwin
-        cfg:
-          - all_tests
+        # cfg:
+        #   - all_tests
         # Exclude invalid combinations
         exclude:
           - os: ubuntu-latest
@@ -303,7 +303,7 @@ jobs:
         run: cargo install cargo-hack
       - name: Miri
         run: |
-          bash ci/miri_sb.sh ${{ matrix.target }} ${{ matrix.cfg }}
+          bash ci/miri_sb.sh ${{ matrix.target }}
 
   loom:
     name: loom

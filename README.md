@@ -3,7 +3,7 @@
 </div>
 <div align="center">
 
-A template for creating Rust open-source GitHub repo.
+A log for tracking discard stats of multi-files databases.
 
 [<img alt="github" src="https://img.shields.io/badge/github-al8n/dtlog-8da0cb?style=for-the-badge&logo=Github" height="22">][Github-url]
 <img alt="LoC" src="https://img.shields.io/endpoint?url=https%3A%2F%2Fgist.githubusercontent.com%2Fal8n%2F327b2a8aef9003246e45c6e47fe63937%2Fraw%2Fdtlog" height="22">
@@ -21,13 +21,19 @@ English | [简体中文][zh-cn-url]
 
 ## Installation
 
-```toml
-[dependencies]
-dtlog = "0.1"
-```
+- Default
+  
+  ```toml
+  [dependencies]
+  dtlog = "0.1"
+  ```
 
-## Features
-- [x] Create a Rust open-source repo fast 
+- use without `std` (`alloc` required)
+  
+  ```toml
+  [dependencies]
+  dtlog = { version = "0.1", default-features = false, features = ["alloc"] }
+  ```
 
 #### License
 
@@ -36,7 +42,7 @@ Apache License (Version 2.0).
 
 See [LICENSE-APACHE](LICENSE-APACHE), [LICENSE-MIT](LICENSE-MIT) for details.
 
-Copyright (c) 2021 Al Liu.
+Copyright (c) 2024 Al Liu.
 
 [Github-url]: https://github.com/al8n/dtlog/
 [CI-url]: https://github.com/al8n/dtlog/actions/workflows/ci.yml

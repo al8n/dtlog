@@ -264,6 +264,16 @@ where
           .get_bytes_mut(data_offset + off, DISCARD_LEN_SIZE);
         let new_discard = discard.get() + cur_disc;
         buf.copy_from_slice(&(new_discard).to_be_bytes());
+
+        #[cfg(all(feature = "memmap", not(target_family = "wasm")))]
+        {
+          if self.opts.sync() {
+            self
+              .arena
+              .flush_header_and_range(off, DISCARD_LEN_SIZE)
+              .unwrap();
+          }
+        }
       }
 
       return Ok(cur_disc);
@@ -293,6 +303,7 @@ where
 
     IndexSort::sort(self);
 
+    #[cfg(all(feature = "memmap", not(target_family = "wasm")))]
     if self.opts.sync() {
       self.arena.flush().map_err(|e| Either::Right(e.into()))?;
     }
@@ -324,6 +335,16 @@ where
           .get_bytes_mut(data_offset + off, DISCARD_LEN_SIZE);
         let new_discard = cur_disc - discard.get();
         buf.copy_from_slice(&(new_discard).to_be_bytes());
+
+        #[cfg(all(feature = "memmap", not(target_family = "wasm")))]
+        {
+          if self.opts.sync() {
+            self
+              .arena
+              .flush_header_and_range(off, DISCARD_LEN_SIZE)
+              .unwrap();
+          }
+        }
       }
 
       return Some(cur_disc);

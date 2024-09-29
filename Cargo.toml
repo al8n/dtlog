@@ -1,6 +1,6 @@
 [package]
 name = "dtlog"
-version = "0.0.0"
+version = "0.1.0"
 edition = "2021"
 repository = "https://github.com/al8n/dtlog"
 homepage = "https://github.com/al8n/dtlog"
@@ -9,7 +9,7 @@ description = "A log for tracking discard stats of multi-files databases."
 license = "MIT OR Apache-2.0"
 rust-version = "1.81.0"
 keywords = ["log", "database", "discard", "stats", "lsm"]
-categories = ["data-structures", "database-implementations", "development-tools", "no_std"]
+categories = ["data-structures", "database-implementations", "development-tools", "no-std"]
 
 [[bench]]
 path = "benches/foo.rs"

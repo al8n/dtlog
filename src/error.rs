@@ -56,7 +56,7 @@ impl Error {
     }
   }
 
-  #[cfg(feature = "std")]
+  #[cfg(all(feature = "memmap", not(target_family = "wasm")))]
   #[inline]
   pub(crate) fn from_arena_io_err(e: std::io::Error) -> std::io::Error {
     if e.to_string().starts_with("ARENA's magic version mismatch") {

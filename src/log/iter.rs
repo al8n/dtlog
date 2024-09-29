@@ -29,13 +29,11 @@ where
       let entry_size = I::ENCODED_LEN + DISCARD_LEN_SIZE;
       let data = self.log.arena.data();
       let offset = self.idx * entry_size;
-      let fid =
-        unsafe { <I::Ref<'_> as TypeRef>::from_slice(&data[offset..offset + I::ENCODED_LEN]) };
-      let discard = u64::from_be_bytes(
-        (&data[offset + I::ENCODED_LEN..offset + I::ENCODED_LEN + DISCARD_LEN_SIZE])
-          .try_into()
-          .unwrap(),
-      );
+      let fid_buf = &data[offset..offset + I::ENCODED_LEN];
+      let fid = unsafe { <I::Ref<'_> as TypeRef>::from_slice(fid_buf) };
+
+      let value_buf = &data[offset + I::ENCODED_LEN..offset + I::ENCODED_LEN + DISCARD_LEN_SIZE];
+      let discard = u64::from_be_bytes(value_buf.try_into().unwrap());
 
       self.idx += 1;
 
@@ -102,8 +100,8 @@ where
       let entry_size = I::ENCODED_LEN + DISCARD_LEN_SIZE;
       let data = self.log.arena.data();
       let offset = self.idx * entry_size;
-      let fid =
-        unsafe { <I::Ref<'_> as TypeRef>::from_slice(&data[offset..offset + I::ENCODED_LEN]) };
+      let fid_buf = &data[offset..offset + I::ENCODED_LEN];
+      let fid = unsafe { <I::Ref<'_> as TypeRef>::from_slice(fid_buf) };
 
       self.idx += 1;
 
@@ -170,11 +168,8 @@ where
       let entry_size = I::ENCODED_LEN + DISCARD_LEN_SIZE;
       let data = self.log.arena.data();
       let offset = self.idx * entry_size;
-      let discard = u64::from_be_bytes(
-        (&data[offset + I::ENCODED_LEN..offset + I::ENCODED_LEN + DISCARD_LEN_SIZE])
-          .try_into()
-          .unwrap(),
-      );
+      let value_buf = &data[offset + I::ENCODED_LEN..offset + I::ENCODED_LEN + DISCARD_LEN_SIZE];
+      let discard = u64::from_be_bytes(value_buf.try_into().unwrap());
 
       self.idx += 1;
 

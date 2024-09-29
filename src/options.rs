@@ -315,6 +315,7 @@ impl Options {
   /// use dtlog::Options;
   ///
   /// let options = Options::new().with_capacity(1024);
+  /// assert_eq!(options.capacity(), 1024);
   /// ```
   #[inline]
   pub const fn capacity(&self) -> u32 {

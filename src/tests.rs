@@ -52,6 +52,10 @@ fn basic(mut log: DiscardLog) {
     assert_eq!(discard, (i * 100 - 1) as u64);
   }
 
+  assert!(log.get(&50).is_none());
+  assert!(log.clear(&50).is_none());
+  assert!(log.decrease(&50, NonZeroU64::new(1).unwrap()).is_none());
+
   assert_eq!(log.max_discard().unwrap(), (20, 1999));
   assert_eq!(log.len(), 20);
 
@@ -60,16 +64,27 @@ fn basic(mut log: DiscardLog) {
   assert_eq!(middle, (11, 1099));
   assert_eq!(iter.size_hint(), (9, Some(9)));
   assert_eq!(iter.count(), 9);
+  assert_eq!(log.iter().nth(100), None);
 
   let mut iter = log.keys();
   let middle = iter.nth(10).unwrap();
   assert_eq!(middle, 11);
   assert_eq!(iter.count(), 9);
+  assert_eq!(log.keys().nth(100), None);
 
   let mut iter = log.values();
   let middle = iter.nth(10).unwrap();
   assert_eq!(middle, 1099);
   assert_eq!(iter.count(), 9);
+  assert_eq!(log.values().nth(100), None);
+
+  for i in 1..=20u32 {
+    log.clear(&i).unwrap();
+  }
+
+  for i in 1..=20u32 {
+    log.increase(&i, NonZeroU64::new(1000).unwrap()).unwrap();
+  }
 }
 
 #[test]
@@ -115,17 +130,20 @@ fn test_discard_log_map_file() {
   basic(log);
 
   let log = unsafe { Options::new().with_read(true).map::<u32, _>(&p).unwrap() };
+  assert!(!log.is_empty());
+  assert_eq!(log.len(), 20);
+  assert!(log.capacity() > 20);
 
   for i in 11..=20u32 {
     let discard = log.get(&i).unwrap();
-    assert_eq!(discard, (i * 100 - 1) as u64);
+    assert_eq!(discard, 1000);
   }
 
-  assert_eq!(log.max_discard().unwrap(), (20, 1999));
+  assert_eq!(log.max_discard().unwrap(), (20, 1000));
 
   let mut iter = log.iter();
   let middle = iter.nth(10).unwrap();
-  assert_eq!(middle, (11, 1099));
+  assert_eq!(middle, (11, 1000));
   assert_eq!(iter.size_hint(), (9, Some(9)));
 
   let mut iter = log.keys();
@@ -135,6 +153,6 @@ fn test_discard_log_map_file() {
 
   let mut iter = log.values();
   let middle = iter.nth(10).unwrap();
-  assert_eq!(middle, 1099);
+  assert_eq!(middle, 1000);
   assert_eq!(iter.count(), 9);
 }

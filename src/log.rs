@@ -201,22 +201,14 @@ where
     let new_cap = ((self.arena.capacity() as u64) * 2).min(u32::MAX as u64) as usize;
     let entry_size = I::ENCODED_LEN + DISCARD_LEN_SIZE;
     #[cfg(not(all(feature = "memmap", not(target_family = "wasm"))))]
-    {
-      self.arena.truncate(new_cap);
-      let cap = (self.arena.remaining() / entry_size) + self.len;
-      self.capacity = cap;
-      Ok(())
-    }
+    self.arena.truncate(new_cap);
 
     #[cfg(all(feature = "memmap", not(target_family = "wasm")))]
-    self
-      .arena
-      .truncate(new_cap)
-      .map(|_| {
-        let cap = (self.arena.remaining() / entry_size) + self.len;
-        self.capacity = cap;
-      })
-      .map_err(Into::into)
+    self.arena.truncate(new_cap)?;
+
+    let cap = (self.arena.remaining() / entry_size) + self.len;
+    self.capacity = cap;
+    Ok(())
   }
 }
 

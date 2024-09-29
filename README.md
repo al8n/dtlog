@@ -35,6 +35,10 @@ English | [简体中文][zh-cn-url]
   dtlog = { version = "0.1", default-features = false, features = ["alloc"] }
   ```
 
+## Examples
+
+Please see [`examples`](./examples/).
+
 #### License
 
 `dtlog` is under the terms of both the MIT license and the

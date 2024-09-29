@@ -16,6 +16,22 @@ path = "benches/foo.rs"
 name = "foo"
 harness = false
 
+[[example]]
+path = "examples/ondisk.rs"
+name = "ondisk"
+required-features = ["memmap"]
+
+[[example]]
+path = "examples/anon.rs"
+name = "anon"
+required-features = ["memmap"]
+
+[[example]]
+path = "examples/no_std.rs"
+name = "no_std"
+required-features = ["alloc"]
+
+
 [features]
 default = ["memmap", "rarena-allocator/default"]
 alloc = ["rarena-allocator/alloc"]

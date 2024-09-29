@@ -32,7 +32,7 @@ impl Options {
   /// ## Examples
   ///
   /// ```rust
-  /// use dtlog::options::Options;
+  /// use dtlog::Options;
   ///
   /// let opts = Options::new().with_read(true);
   /// ```
@@ -55,7 +55,7 @@ impl Options {
   /// ## Examples
   ///
   /// ```rust
-  /// use dtlog::options::Options;
+  /// use dtlog::Options;
   ///
   /// let opts = Options::new().with_write(true);
   /// ```
@@ -102,7 +102,7 @@ impl Options {
   /// ## Examples
   ///
   /// ```rust
-  /// use dtlog::options::Options;
+  /// use dtlog::Options;
   ///
   /// let opts = Options::new().with_append(true);
   /// ```
@@ -125,7 +125,7 @@ impl Options {
   /// ## Examples
   ///
   /// ```rust
-  /// use dtlog::options::Options;
+  /// use dtlog::Options;
   ///
   /// let opts = Options::new().with_write(true).with_truncate(true);
   /// ```
@@ -150,7 +150,7 @@ impl Options {
   /// ## Examples
   ///
   /// ```rust
-  /// use dtlog::options::Options;
+  /// use dtlog::Options;
   ///
   /// let opts = Options::new().with_write(true).with_create(true);
   /// ```
@@ -180,7 +180,7 @@ impl Options {
   /// ## Examples
   ///
   /// ```rust
-  /// use dtlog::options::Options;
+  /// use dtlog::Options;
   ///
   /// let file = Options::new()
   ///   .with_write(true)
@@ -203,7 +203,7 @@ impl Options {
   /// ## Example
   ///
   /// ```
-  /// use dtlog::options::Options;
+  /// use dtlog::Options;
   ///
   /// let opts = Options::new().with_offset(30);
   /// ```
@@ -224,7 +224,7 @@ impl Options {
   /// ## Example
   ///
   /// ```
-  /// use dtlog::options::Options;
+  /// use dtlog::Options;
   ///
   /// let stack = Options::new().with_stack(true);
   /// ```
@@ -249,7 +249,7 @@ impl Options {
   /// ## Example
   ///
   /// ```
-  /// use dtlog::options::Options;
+  /// use dtlog::Options;
   ///
   /// let stack = Options::new().with_huge(Some(8));
   /// ```
@@ -272,7 +272,7 @@ impl Options {
   /// ## Example
   ///
   /// ```
-  /// use dtlog::options::Options;
+  /// use dtlog::Options;
   ///
   /// let opts = Options::new().with_populate(true);
   /// ```
@@ -291,7 +291,7 @@ impl Options {
   /// ## Examples
   ///
   /// ```rust
-  /// use dtlog::options::Options;
+  /// use dtlog::Options;
   ///
   /// let opts = Options::new().with_read(true);
   /// assert_eq!(opts.read(), true);
@@ -308,7 +308,7 @@ impl Options {
   /// ## Examples
   ///
   /// ```rust
-  /// use dtlog::options::Options;
+  /// use dtlog::Options;
   ///
   /// let opts = Options::new().with_write(true);
   /// assert_eq!(opts.write(), true);
@@ -325,7 +325,7 @@ impl Options {
   /// ## Examples
   ///
   /// ```rust
-  /// use dtlog::options::Options;
+  /// use dtlog::Options;
   ///
   /// let opts = Options::new().with_append(true);
   /// assert_eq!(opts.append(), true);
@@ -342,7 +342,7 @@ impl Options {
   /// ## Examples
   ///
   /// ```rust
-  /// use dtlog::options::Options;
+  /// use dtlog::Options;
   ///
   /// let opts = Options::new().with_truncate(true);
   /// assert_eq!(opts.truncate(), true);
@@ -359,7 +359,7 @@ impl Options {
   /// ## Examples
   ///
   /// ```rust
-  /// use dtlog::options::Options;
+  /// use dtlog::Options;
   ///
   /// let opts = Options::new().with_create(true);
   /// assert_eq!(opts.create(), true);
@@ -376,7 +376,7 @@ impl Options {
   /// ## Examples
   ///
   /// ```rust
-  /// use dtlog::options::Options;
+  /// use dtlog::Options;
   ///
   /// let opts = Options::new().with_create_new(true);
   /// assert_eq!(opts.create_new(), true);
@@ -393,7 +393,7 @@ impl Options {
   /// ## Examples
   ///
   /// ```rust
-  /// use dtlog::options::Options;
+  /// use dtlog::Options;
   ///
   /// let opts = Options::new().with_offset(30);
   /// assert_eq!(opts.offset(), 30);
@@ -410,7 +410,7 @@ impl Options {
   /// ## Examples
   ///
   /// ```rust
-  /// use dtlog::options::Options;
+  /// use dtlog::Options;
   ///
   /// let opts = Options::new().with_stack(true);
   /// assert_eq!(opts.stack(), true);
@@ -427,7 +427,7 @@ impl Options {
   /// ## Examples
   ///
   /// ```rust
-  /// use dtlog::options::Options;
+  /// use dtlog::Options;
   ///
   /// let opts = Options::new().with_huge(Some(8));
   /// assert_eq!(opts.huge(), Some(8));
@@ -444,7 +444,7 @@ impl Options {
   /// ## Examples
   ///
   /// ```rust
-  /// use dtlog::options::Options;
+  /// use dtlog::Options;
   ///
   /// let opts = Options::new().with_populate(true);
   /// assert_eq!(opts.populate(), true);
@@ -475,13 +475,10 @@ impl Options {
   /// ## Example
   ///
   /// ```rust
-  /// use dtlog::{sync, unsync, Builder};
+  /// use dtlog::Options;
   ///
-  /// // Create a sync in-memory value log.
-  /// let map = Options::new().with_capacity(1024).map_anon::<DiscardLog>(0u32).unwrap();
-  ///
-  /// // Create a unsync in-memory value log.
-  /// let arena = Options::new().with_capacity(1024).map_anon::<unDiscardLog>(0u32).unwrap();
+  /// // Create an in-memory discard log.
+  /// let map = Options::new().with_capacity(1024).map_anon::<u32>().unwrap();
   /// ```
   ///
   /// [`Options::alloc`]: #method.alloc
@@ -507,7 +504,7 @@ impl Options {
       })
   }
 
-  /// Opens a read-only map which backed by file-backed memory map.
+  /// Opens a read-only log which backed by file-backed memory map.
   ///
   /// ## Safety
   /// - All file-backed memory map constructors are marked `unsafe` because of the potential for
@@ -530,19 +527,17 @@ impl Options {
   ///     .with_write(true)
   ///     .map_mut::<u32, _>(
   ///       dir.path().join("map_example.discard"),
-  ///       1u32
   ///     )
   ///     .unwrap()
   /// };
   ///
-  /// drop(map);
+  /// drop(log);
   ///
   /// let log = unsafe {
   ///   Options::new()
   ///     .with_read(true)
   ///     .map::<u32, _>(
   ///       dir.path().join("map_example.discard"),
-  ///       1u32,
   ///     )
   ///    .unwrap()
   /// };
@@ -559,7 +554,7 @@ impl Options {
       .map_err(Either::unwrap_right)
   }
 
-  /// Opens a read-only map which backed by file-backed memory map with a path builder.
+  /// Opens a read-only log which backed by file-backed memory map with a path builder.
   ///
   /// ## Safety
   /// - All file-backed memory map constructors are marked `unsafe` because of the potential for
@@ -582,7 +577,6 @@ impl Options {
   ///     .with_write(true)
   ///     .map_mut::<u32, _>(
   ///       dir.path().join("map_with_path_builder_example.discard"),
-  ///       1u32
   ///     )
   ///     .unwrap()
   /// };
@@ -594,7 +588,6 @@ impl Options {
   ///     .with_read(true)
   ///     .map_with_path_builder::<u32, _, ()>(
   ///       || Ok(dir.path().join("map_with_path_builder_example.discard")),
-  ///       1u32,
   ///     )
   ///    .unwrap()
   /// };
@@ -628,7 +621,7 @@ impl Options {
       })
   }
 
-  /// Creates a new map or reopens a map which backed by a file backed memory map.
+  /// Creates a new log or reopens a map which backed by a file backed memory map.
   ///
   /// ## Safety
   /// - All file-backed memory map constructors are marked `unsafe` because of the potential for
@@ -640,7 +633,7 @@ impl Options {
   /// ## Example
   ///
   /// ```rust
-  /// use dtlog::{DiscardLog, Options};
+  /// use dtlog::Options;
   ///
   /// let dir = tempfile::tempdir().unwrap();
   /// let map = unsafe {
@@ -649,9 +642,8 @@ impl Options {
   ///     .with_create_new(true)
   ///     .with_read(true)
   ///     .with_write(true)
-  ///     .map_mut::<DiscardLog, _>(
+  ///     .map_mut::<u32, _>(
   ///       dir.path().join("map_mut_example.discard"),
-  ///       1u32
   ///     )
   ///     .unwrap()
   /// };
@@ -668,7 +660,7 @@ impl Options {
       .map_err(Either::unwrap_right)
   }
 
-  /// Creates a new map or reopens a map which backed by a file backed memory map with path builder.
+  /// Creates a new log or reopens a map which backed by a file backed memory map with path builder.
   ///
   /// ## Safety
   /// - All file-backed memory map constructors are marked `unsafe` because of the potential for
@@ -680,7 +672,7 @@ impl Options {
   /// ## Example
   ///
   /// ```rust
-  /// use dtlog::{DiscardLog, Options};
+  /// use dtlog::Options;
   ///
   /// let dir = tempfile::tempdir().unwrap();
   /// let map = unsafe {
@@ -689,9 +681,8 @@ impl Options {
   ///     .with_create_new(true)
   ///     .with_read(true)
   ///     .with_write(true)
-  ///     .map_mut_with_path_builder::<DiscardLog, _, ()>(
+  ///     .map_mut_with_path_builder::<u32, _, ()>(
   ///       || Ok(dir.path().join("map_mut_with_path_builder_example.discard")),
-  ///       1u32
   ///     )
   ///     .unwrap()
   /// };

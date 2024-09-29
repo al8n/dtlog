@@ -9,8 +9,9 @@ use rarena_allocator::{either::Either, unsync::Arena, Allocator, Buffer};
 
 use super::{error::Error, Options};
 
-mod iter;
-pub use iter::*;
+/// Iterators for the discard log.
+pub mod iter;
+use iter::*;
 
 mod immutable;
 pub use immutable::*;
@@ -39,8 +40,10 @@ impl_fid!(u16, u32, u64, u128);
 pub struct DiscardLog<I = u32> {
   arena: Arena,
   len: usize,
-  opts: Options,
   capacity: usize,
+
+  // Once constructed, the below fields are immutable.
+  opts: Options,
   _marker: PhantomData<I>,
 }
 
@@ -118,11 +121,6 @@ impl<I> DiscardLog<I> {
     self.arena.data()
   }
 
-  #[inline]
-  fn truncate(&mut self) {
-    todo!()
-  }
-
   pub(crate) fn construct(arena: Arena, opts: Options) -> Self
   where
     I: Fid,
@@ -162,9 +160,27 @@ where
   I: Fid,
 {
   /// Returns an iterator over the entries of the discard log.
+  ///
+  /// See also [`values`] and [`keys`].
   #[inline]
   pub const fn iter(&self) -> Iter<'_, I> {
     Iter::new(self)
+  }
+
+  /// Returns an iterator over the fid of the discard log.
+  ///
+  /// The iterator returned by this function is faster than the [`iter`] iterator because it does not need to decode the discard value.
+  #[inline]
+  pub const fn keys(&self) -> Keys<'_, I> {
+    Keys::new(self)
+  }
+
+  /// Returns an iterator over the discard values of the discard log.
+  ///
+  /// The iterator returned by this function is faster than the [`iter`] iterator because it does not need to decode the file id.
+  #[inline]
+  pub const fn values(&self) -> Values<'_, I> {
+    Values::new(self)
   }
 
   /// Returns the maximum number of discarded bytes and the file id that contains the maximum discard value.
@@ -173,6 +189,29 @@ where
   #[inline]
   pub fn max_discard(&self) -> Option<(I::Ref<'_>, u64)> {
     self.iter().max_by(|(_, a), (_, b)| a.cmp(b))
+  }
+
+  #[inline]
+  fn truncate(&mut self) -> Result<(), Error> {
+    let new_cap = ((self.arena.capacity() as u64) * 2).min(u32::MAX as u64) as usize;
+    let entry_size = I::ENCODED_LEN + DISCARD_LEN_SIZE;
+    #[cfg(not(all(feature = "memmap", not(target_family = "wasm"))))]
+    {
+      self.arena.truncate(new_cap);
+      let cap = (self.arena.remaining() / entry_size) + self.len;
+      self.capacity = cap;
+      Ok(())
+    }
+
+    #[cfg(all(feature = "memmap", not(target_family = "wasm")))]
+    self
+      .arena
+      .truncate(new_cap)
+      .map(|_| {
+        let cap = (self.arena.remaining() / entry_size) + self.len;
+        self.capacity = cap;
+      })
+      .map_err(Into::into)
   }
 }
 
@@ -234,7 +273,7 @@ where
 
     // Check if there is enough space in the arena, if not increase the size of the arena.
     while self.arena.remaining() < entry_size {
-      self.truncate();
+      self.truncate().map_err(Either::Right)?;
     }
 
     let discard = discard.get();
@@ -283,7 +322,7 @@ where
         let buf = self
           .arena
           .get_bytes_mut(data_offset + off, DISCARD_LEN_SIZE);
-        let new_discard = discard.get() - cur_disc;
+        let new_discard = cur_disc - discard.get();
         buf.copy_from_slice(&(new_discard).to_be_bytes());
       }
 

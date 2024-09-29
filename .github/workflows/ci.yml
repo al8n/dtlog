@@ -183,7 +183,7 @@ jobs:
         path: ~/.cargo
         key: ${{ runner.os }}-coverage-dotcargo
     - name: Run test
-      run: cargo hack test --feature-powerset --exclude-no-default-features --exclude-features loom
+      run: cargo hack test --feature-powerset --exclude-no-default-features 
   
   sanitizer:
     name: sanitizer
@@ -210,7 +210,7 @@ jobs:
         run: rustup component add rust-src
       - name: Install cargo-hack
         run: cargo install cargo-hack
-      - name: ASAN / LSAN / TSAN (Linux)
+      - name: ASAN / LSAN / MSAN / TSAN (Linux)
         run: ci/sanitizer.sh
 
   miri-tb:

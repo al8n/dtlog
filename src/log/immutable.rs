@@ -1,6 +1,6 @@
 use dbutils::equivalent::Comparable;
 
-use super::{DiscardLog, Fid, Iter};
+use super::{DiscardLog, Fid, Iter, Keys, Values};
 
 /// An immutable discard log that stores the discard stats for each file id.
 pub struct ImmutableDiscardLog<I = u32>(DiscardLog<I>);
@@ -41,9 +41,27 @@ where
   I: Fid,
 {
   /// Returns an iterator over the entries of the discard log.
+  ///
+  /// See also [`values`] and [`keys`].
   #[inline]
   pub const fn iter(&self) -> Iter<'_, I> {
     self.0.iter()
+  }
+
+  /// Returns an iterator over the fid of the discard log.
+  ///
+  /// The iterator returned by this function is faster than the [`iter`] iterator because it does not need to decode the discard value.
+  #[inline]
+  pub const fn keys(&self) -> Keys<'_, I> {
+    self.0.keys()
+  }
+
+  /// Returns an iterator over the discard values of the discard log.
+  ///
+  /// The iterator returned by this function is faster than the [`iter`] iterator because it does not need to decode the file id.
+  #[inline]
+  pub const fn values(&self) -> Values<'_, I> {
+    self.0.values()
   }
 
   /// Returns the maximum number of discarded bytes and the file id that contains the maximum discard value.

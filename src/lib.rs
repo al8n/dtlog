@@ -18,3 +18,6 @@ pub use options::*;
 
 /// Error types
 pub mod error;
+
+#[cfg(test)]
+mod tests;

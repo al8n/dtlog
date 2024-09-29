@@ -101,7 +101,7 @@ impl Options {
   /// ## Example
   ///
   /// ```rust
-  /// use dtlog::options::Options;
+  /// use dtlog::Options;
   ///
   /// let opts = Options::new().with_reserved(8);
   /// ```
@@ -118,7 +118,7 @@ impl Options {
   /// ## Example
   ///
   /// ```rust
-  /// use dtlog::options::Options;
+  /// use dtlog::Options;
   ///
   /// let opts = Options::new().with_sync(false);
   /// ```
@@ -135,7 +135,7 @@ impl Options {
   /// ## Example
   ///
   /// ```rust
-  /// use dtlog::options::Options;
+  /// use dtlog::Options;
   ///
   /// let opts = Options::new().with_validate_checksum(false);
   /// ```
@@ -159,7 +159,7 @@ impl Options {
   /// ## Example
   ///
   /// ```rust
-  /// use dtlog::options::Options;
+  /// use dtlog::Options;
   ///
   /// let opts = Options::new().with_lock_meta(false);
   /// ```
@@ -180,7 +180,7 @@ impl Options {
   /// ## Example
   ///
   /// ```
-  /// use dtlog::options::Options;
+  /// use dtlog::Options;
   ///
   /// let opts = Options::new().with_magic_version(1);
   /// ```
@@ -203,7 +203,7 @@ impl Options {
   /// ## Example
   ///
   /// ```
-  /// use dtlog::options::Options;
+  /// use dtlog::Options;
   ///
   /// let opts = Options::default().with_unify(true);
   /// ```
@@ -218,7 +218,7 @@ impl Options {
   /// ## Example
   ///
   /// ```
-  /// use dtlog::options::Options;
+  /// use dtlog::Options;
   ///
   /// let options = Options::new().with_capacity(1024);
   /// ```
@@ -239,7 +239,7 @@ impl Options {
   /// ## Example
   ///
   /// ```rust
-  /// use dtlog::options::Options;
+  /// use dtlog::Options;
   ///
   /// let opts = Options::new().with_reserved(8);
   ///
@@ -257,7 +257,7 @@ impl Options {
   /// ## Example
   ///
   /// ```rust
-  /// use dtlog::options::Options;
+  /// use dtlog::Options;
   ///
   /// let opts = Options::new().with_sync(false);
   ///
@@ -275,7 +275,7 @@ impl Options {
   /// ## Example
   ///
   /// ```rust
-  /// use dtlog::options::Options;
+  /// use dtlog::Options;
   ///
   /// let opts = Options::new().with_validate_checksum(false);
   ///
@@ -296,7 +296,7 @@ impl Options {
   /// ## Example
   ///
   /// ```rust
-  /// use dtlog::options::Options;
+  /// use dtlog::Options;
   ///
   /// let opts = Options::new().with_lock_meta(false);
   ///
@@ -312,7 +312,7 @@ impl Options {
   /// ## Example
   ///
   /// ```rust
-  /// use dtlog::options::Options;
+  /// use dtlog::Options;
   ///
   /// let options = Options::new().with_capacity(1024);
   /// ```
@@ -337,7 +337,7 @@ impl Options {
   /// ## Example
   ///
   /// ```rust
-  /// use dtlog::options::Options;
+  /// use dtlog::Options;
   ///
   /// let opts = Options::new().with_unify(true);
   ///
@@ -359,7 +359,7 @@ impl Options {
   /// ## Example
   ///
   /// ```rust
-  /// use dtlog::options::Options;
+  /// use dtlog::Options;
   ///
   /// let opts = Options::new().with_magic_version(1);
   ///

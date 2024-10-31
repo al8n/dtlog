@@ -1,6 +1,6 @@
 use core::iter::FusedIterator;
 
-use dbutils::traits::TypeRef;
+use dbutils::types::TypeRef;
 use rarena_allocator::Allocator;
 
 use super::{DiscardLog, Fid, DISCARD_LEN_SIZE};

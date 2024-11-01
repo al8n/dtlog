@@ -2,7 +2,7 @@ use core::{cmp, marker::PhantomData, num::NonZeroU64};
 
 pub use dbutils::{
   equivalent::{Comparable, Equivalent},
-  types::{Type, TypeRef, Str, SliceRef},
+  types::{SliceRef, Str, Type, TypeRef},
 };
 use indexsort::{search, IndexSort};
 use rarena_allocator::{either::Either, unsync::Arena, Allocator, Buffer};

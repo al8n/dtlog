@@ -40,7 +40,7 @@ memmap = ["std", "rarena-allocator/memmap"]
 
 [dependencies]
 dbutils = { version = "0.9", default-features = false }
-indexsort = "0.1"
+indexsort = "0.2"
 rarena-allocator = { version = "0.4", default-features = false }
 viewit = "0.1.5"
 
